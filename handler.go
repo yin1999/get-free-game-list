@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -23,11 +22,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	var resp string
 	defer func() {
 		if err != nil {
-			log.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 		} else {
-			log.Print("task finished\n")
+			os.Stderr.WriteString("task finished\n")
 			w.Write([]byte(resp))
 		}
 	}()
@@ -40,17 +39,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	data = data.available(time.Now()).Near(24 * time.Hour)
 	if len(data) == 0 {
-		log.Print("no new game avaliable\n")
+		os.Stderr.WriteString("no new game avaliable\n")
 		resp = "no new game avaliable\n"
 		return
 	}
-	log.Printf("new game avaliable: %v\n", data)
+	fmt.Fprintf(os.Stderr, "new game avaliable: %v\n", data)
 	var client *messaging.Client
 	client, err = newClient()
 	if err != nil {
-		log.Println(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintln(w, err.Error())
 		return
 	}
 	_, err = client.Send(ctx, &messaging.Message{

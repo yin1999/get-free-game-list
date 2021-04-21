@@ -1,13 +1,13 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"os"
 )
 
 func main() {
-	log.Print("starting server...\n")
+	os.Stderr.WriteString("starting server...\n")
 
 	http.HandleFunc("/", handler)
 	port := os.Getenv("PORT")
@@ -15,6 +15,7 @@ func main() {
 		port = "8080"
 	}
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatal(err)
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
 	}
 }
