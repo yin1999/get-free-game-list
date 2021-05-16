@@ -37,7 +37,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	data = data.available(time.Now()).Near(24 * time.Hour)
+	data = data.Near(24 * time.Hour)
 	if len(data) == 0 {
 		os.Stderr.WriteString("no new game avaliable\n")
 		resp = "no new game avaliable\n"
@@ -91,28 +91,20 @@ func getFreeGameList(ctx context.Context, url string) (gameList, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
-	data := &responseData{}
-	err = json.NewDecoder(res.Body).Decode(&data)
+	data := &struct {
+		Data struct {
+			Catalog struct {
+				SearchStore struct {
+					Elements gameList `json:"elements"`
+				} `json:"searchStore"`
+			} `json:"Catalog"`
+		}
+	}{}
+	err = json.NewDecoder(res.Body).Decode(data)
 	if err != nil {
-		data = nil
+		return nil, err
 	}
 	return data.Data.Catalog.SearchStore.Elements, err
-}
-
-type responseData struct {
-	Data dataStruct
-}
-
-type dataStruct struct {
-	Catalog catalogStruct `json:"Catalog"`
-}
-
-type catalogStruct struct {
-	SearchStore searchStoreStruct `json:"searchStore"`
-}
-
-type searchStoreStruct struct {
-	Elements gameList `json:"elements"`
 }
 
 type gameList []gameData
@@ -163,19 +155,11 @@ func (g gameData) after(t time.Time) bool {
 	return false
 }
 
-func (data gameList) available(t time.Time) (res gameList) {
-	for i := range data {
-		if data[i].available(t) {
-			res = append(res, data[i])
-		}
-	}
-	return
-}
-
 func (data gameList) Near(d time.Duration) (res gameList) {
+	now := time.Now()
 	t := time.Now().Add(-d)
 	for i := range data {
-		if data[i].after(t) {
+		if data[i].available(now) && data[i].after(t) {
 			res = append(res, data[i])
 		}
 	}
