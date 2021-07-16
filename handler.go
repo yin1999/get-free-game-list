@@ -110,10 +110,20 @@ func getFreeGameList(ctx context.Context, url string) (gameList, error) {
 type gameList []gameData
 
 type gameData struct {
-	Title       string          `json:"title"`
-	ID          string          `json:"id"`
-	ProductSlug string          `json:"productSlug"`
-	Promotions  promotionStruct `json:"promotions"`
+	Title      string          `json:"title"`
+	ID         string          `json:"id"`
+	CatalogNs  catalogN        `json:"catalogNs"`
+	Promotions promotionStruct `json:"promotions"`
+	// UrlSlug    string          `json:"urlSlug"`
+}
+
+type catalogN struct {
+	Mappings []pageMap `json:"mappings"`
+}
+
+type pageMap struct {
+	PageSlug string `json:"pageSlug"`
+	PageType string `json:"pageType"`
 }
 
 type promotionStruct struct {
@@ -172,7 +182,7 @@ func (data gameList) Slug() string {
 		if i != 0 {
 			res += ";"
 		}
-		res += data[i].ProductSlug
+		res += data[i].CatalogNs.Mappings[0].PageSlug
 	}
 	return res
 }
