@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	firebase "firebase.google.com/go"
-	"firebase.google.com/go/messaging"
+	firebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/messaging"
 	"google.golang.org/api/option"
 )
 
@@ -30,7 +30,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(resp))
 		}
 	}()
-	ctx, cc := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cc := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cc()
 	var data gameList
 	data, err = getFreeGameList(ctx, requestURL)
@@ -45,17 +45,17 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(os.Stderr, "new game avaliable: %v\n", data)
 	var client *messaging.Client
-	client, err = newClient()
+	client, err = newClient(ctx)
 	if err != nil {
 		return
 	}
 	_, err = client.Send(ctx, &messaging.Message{
 		Notification: &messaging.Notification{
-			Title: fmt.Sprintf("%d new game avaliable", len(data)),
+			Title: fmt.Sprintf("%d new game(s) avaliable", len(data)),
 			Body:  fmt.Sprint(data),
 		},
 		Webpush: &messaging.WebpushConfig{
-			FcmOptions: &messaging.WebpushFcmOptions{
+			FCMOptions: &messaging.WebpushFCMOptions{
 				Link: "/epicfreegame?slug=" + data.Slug(),
 			},
 		},
@@ -66,8 +66,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func newClient() (client *messaging.Client, err error) {
-	ctx := context.Background()
+func newClient(ctx context.Context) (client *messaging.Client, err error) {
 	opt := option.WithCredentialsJSON([]byte(os.Getenv("firebaseadminsdk")))
 	var app *firebase.App
 	app, err = firebase.NewApp(ctx, nil, opt)
@@ -114,7 +113,6 @@ type gameData struct {
 	ID         string          `json:"id"`
 	CatalogNs  catalogN        `json:"catalogNs"`
 	Promotions promotionStruct `json:"promotions"`
-	// UrlSlug    string          `json:"urlSlug"`
 }
 
 type catalogN struct {
