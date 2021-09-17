@@ -1,4 +1,4 @@
-FROM golang:latest as builder
+FROM golang:alpine as builder
 
 WORKDIR /app
 
@@ -7,7 +7,7 @@ RUN go mod download
 
 RUN go build -ldflags "-s -w" -v -o server
 
-FROM debian:bullseye-slim
+FROM alpine:latest
 
 WORKDIR /app
 
