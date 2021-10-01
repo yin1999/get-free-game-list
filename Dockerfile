@@ -3,11 +3,13 @@ FROM golang:alpine as builder
 WORKDIR /app
 
 COPY . ./
+# static linking
+ENV CGO_ENABLED=0
 RUN go mod download
 
 RUN go build -ldflags "-s -w" -v -o server
 
-FROM alpine:latest
+FROM busybox:latest
 
 WORKDIR /app
 
