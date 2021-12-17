@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	firebase "firebase.google.com/go/v4"
@@ -13,9 +14,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-const (
-	requestURL = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=zh-CN&country=CN&allowCountries=CN"
-)
+const requestURL = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=zh-CN&country=CN&allowCountries=CN"
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	var err error
@@ -112,10 +111,10 @@ func getFreeGameList(ctx context.Context, url string) (gameList, error) {
 type gameList []*gameData
 
 type gameData struct {
-	Title      string          `json:"title"`
-	ID         string          `json:"id"`
-	CatalogNs  catalogN        `json:"catalogNs"`
-	Promotions promotionStruct `json:"promotions"`
+	Title       string          `json:"title"`
+	ProductSlug string          `json:"productSlug"`
+	CatalogNs   catalogN        `json:"catalogNs"`
+	Promotions  promotionStruct `json:"promotions"`
 }
 
 type catalogN struct {
@@ -205,14 +204,15 @@ loop:
 }
 
 func (data gameList) Slug() string {
-	res := ""
-	for i := range data {
-		if i != 0 {
-			res += ";"
+	res := make([]string, 0, len(data))
+	for _, v := range data {
+		index := strings.IndexByte(v.ProductSlug, '/')
+		if index == -1 {
+			index = len(v.ProductSlug)
 		}
-		res += data[i].CatalogNs.Mappings[0].PageSlug
+		res = append(res, v.ProductSlug[:index])
 	}
-	return res
+	return strings.Join(res, ";")
 }
 
 func (data gameData) String() string {

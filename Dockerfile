@@ -7,7 +7,7 @@ COPY . ./
 ENV CGO_ENABLED=0
 RUN go mod download
 
-RUN go build -ldflags "-s -w" -v -o server
+RUN go build -trimpath -ldflags "-s -w -buildid=" -o server
 
 FROM busybox:latest
 
