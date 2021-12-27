@@ -113,17 +113,7 @@ type gameList []*gameData
 type gameData struct {
 	Title       string          `json:"title"`
 	ProductSlug string          `json:"productSlug"`
-	CatalogNs   catalogN        `json:"catalogNs"`
 	Promotions  promotionStruct `json:"promotions"`
-}
-
-type catalogN struct {
-	Mappings []pageMap `json:"mappings"`
-}
-
-type pageMap struct {
-	PageSlug string `json:"pageSlug"`
-	PageType string `json:"pageType"`
 }
 
 type promotionStruct struct {
