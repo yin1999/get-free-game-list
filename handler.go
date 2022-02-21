@@ -10,6 +10,7 @@ import (
 	"time"
 
 	firebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/db"
 	"firebase.google.com/go/v4/messaging"
 	"google.golang.org/api/option"
 )
@@ -46,19 +47,25 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(os.Stderr, "new game avaliable: %v\n", data)
-	var client *messaging.Client
+	var client *firebase.App
 	client, err = newClient(ctx)
 	if err != nil {
 		return
 	}
-	_, err = client.Send(ctx, &messaging.Message{
+	var messageClient *messaging.Client
+	messageClient, err = client.Messaging(ctx)
+	if err != nil {
+		return
+	}
+	slugs := data.Slug()
+	_, err = messageClient.Send(ctx, &messaging.Message{
 		Notification: &messaging.Notification{
 			Title: fmt.Sprintf("%d new game(s) avaliable", len(data)),
 			Body:  fmt.Sprint(data),
 		},
 		Webpush: &messaging.WebpushConfig{
 			FCMOptions: &messaging.WebpushFCMOptions{
-				Link: "/epicfreegame?slug=" + data.Slug(),
+				Link: "/epicfreegame?slug=" + strings.Join(slugs, ";"),
 			},
 		},
 		Topic: "all",
@@ -66,17 +73,18 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		resp = "send notification to clients"
 	}
-}
-
-func newClient(ctx context.Context) (client *messaging.Client, err error) {
-	opt := option.WithCredentialsJSON([]byte(os.Getenv("firebaseadminsdk")))
-	var app *firebase.App
-	app, err = firebase.NewApp(ctx, nil, opt)
+	var dbClient *db.Client
+	dbClient, err = client.Database(ctx)
 	if err != nil {
 		return
 	}
-	client, err = app.Messaging(ctx)
-	return
+	ref := dbClient.NewRef("freeGameList")
+	err = ref.Set(ctx, slugs)
+}
+
+func newClient(ctx context.Context) (client *firebase.App, err error) {
+	opt := option.WithCredentialsJSON([]byte(os.Getenv("firebaseadminsdk")))
+	return firebase.NewApp(ctx, nil, opt)
 }
 
 func getFreeGameList(ctx context.Context, url string) (gameList, error) {
@@ -193,7 +201,7 @@ loop:
 	return
 }
 
-func (data gameList) Slug() string {
+func (data gameList) Slug() []string {
 	res := make([]string, 0, len(data))
 	for _, v := range data {
 		index := strings.IndexByte(v.ProductSlug, '/')
@@ -202,7 +210,7 @@ func (data gameList) Slug() string {
 		}
 		res = append(res, v.ProductSlug[:index])
 	}
-	return strings.Join(res, ";")
+	return res
 }
 
 func (data gameData) String() string {
