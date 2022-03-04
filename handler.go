@@ -121,6 +121,7 @@ type gameList []*gameData
 type gameData struct {
 	Title       string          `json:"title"`
 	ProductSlug string          `json:"productSlug"`
+	UrlSlug     string          `json:"urlSlug"`
 	Promotions  promotionStruct `json:"promotions"`
 }
 
@@ -204,11 +205,14 @@ loop:
 func (data gameList) Slug() []string {
 	res := make([]string, 0, len(data))
 	for _, v := range data {
-		index := strings.IndexByte(v.ProductSlug, '/')
-		if index == -1 {
-			index = len(v.ProductSlug)
+		slug := v.ProductSlug
+		if slug == "" {
+			slug = v.UrlSlug
 		}
-		res = append(res, v.ProductSlug[:index])
+		if index := strings.IndexByte(slug, '/'); index != -1 {
+			slug = slug[:index]
+		}
+		res = append(res, slug)
 	}
 	return res
 }
