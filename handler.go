@@ -122,7 +122,17 @@ type gameData struct {
 	Title       string          `json:"title"`
 	ProductSlug string          `json:"productSlug"`
 	UrlSlug     string          `json:"urlSlug"`
+	CatalogNs   catalogN        `json:"catalogNs"`
 	Promotions  promotionStruct `json:"promotions"`
+}
+
+type catalogN struct {
+	Mappings []pageMap `json:"mappings"`
+}
+
+type pageMap struct {
+	PageSlug string `json:"pageSlug"`
+	PageType string `json:"pageType"`
 }
 
 type promotionStruct struct {
@@ -204,9 +214,13 @@ loop:
 
 func (data gameList) Slug() []string {
 	res := make([]string, 0, len(data))
+	var slug string
 	for _, v := range data {
-		slug := v.ProductSlug
-		if slug == "" {
+		if tmp := v.catalog("productHome"); tmp != "" {
+			slug = tmp
+		} else if v.ProductSlug != "" {
+			slug = v.ProductSlug
+		} else {
 			slug = v.UrlSlug
 		}
 		if index := strings.IndexByte(slug, '/'); index != -1 {
@@ -215,6 +229,15 @@ func (data gameList) Slug() []string {
 		res = append(res, slug)
 	}
 	return res
+}
+
+func (v *gameData) catalog(key string) string {
+	for i := range v.CatalogNs.Mappings {
+		if v.CatalogNs.Mappings[i].PageType == key {
+			return v.CatalogNs.Mappings[i].PageSlug
+		}
+	}
+	return ""
 }
 
 func (data gameData) String() string {
