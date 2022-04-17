@@ -1,4 +1,4 @@
-FROM golang:alpine as builder
+FROM golang:latest as builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ RUN go mod download
 
 RUN go build -trimpath -ldflags "-s -w -buildid=" -o server
 
-FROM busybox:latest
+FROM scratch
 
 WORKDIR /app
 
