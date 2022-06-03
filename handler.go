@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -65,7 +66,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		},
 		Webpush: &messaging.WebpushConfig{
 			FCMOptions: &messaging.WebpushFCMOptions{
-				Link: "/epicfreegame?slug=" + strings.Join(slugs, ";"),
+				Link: "/epicfreegame?slug=" + url.QueryEscape(strings.Join(slugs, ";")),
 			},
 		},
 		Topic: "all",
@@ -121,6 +122,7 @@ type gameList []*gameData
 type gameData struct {
 	Title       string          `json:"title"`
 	ProductSlug string          `json:"productSlug"`
+	OfferType   string          `json:"offerType"`
 	UrlSlug     string          `json:"urlSlug"`
 	CatalogNs   catalogN        `json:"catalogNs"`
 	Promotions  promotionStruct `json:"promotions"`
@@ -226,9 +228,23 @@ func (data gameList) Slug() []string {
 		if index := strings.IndexByte(slug, '/'); index != -1 {
 			slug = slug[:index]
 		}
-		res = append(res, slug)
+		res = append(res, finalSlug(slug, v.OfferType))
 	}
 	return res
+}
+
+func finalSlug(slug, offerType string) string {
+	slug = "/" + slug
+	switch offerType {
+	case "BUNDLE":
+		slug = "bundles" + slug
+	case "OTHERS":
+		slug = "p" + slug
+	default:
+		slug = "p" + slug
+		fmt.Fprintf(os.Stderr, "unknown offerType: %s\n", offerType)
+	}
+	return slug
 }
 
 func (v *gameData) catalog(key string) string {
