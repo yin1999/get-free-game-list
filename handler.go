@@ -120,12 +120,13 @@ func getFreeGameList(ctx context.Context, url string) (gameList, error) {
 type gameList []*gameData
 
 type gameData struct {
-	Title       string          `json:"title"`
-	ProductSlug string          `json:"productSlug"`
-	OfferType   string          `json:"offerType"`
-	UrlSlug     string          `json:"urlSlug"`
-	CatalogNs   catalogN        `json:"catalogNs"`
-	Promotions  promotionStruct `json:"promotions"`
+	Title         string          `json:"title"`
+	ProductSlug   string          `json:"productSlug"`
+	OfferType     string          `json:"offerType"`
+	UrlSlug       string          `json:"urlSlug"`
+	CatalogNs     catalogN        `json:"catalogNs"`
+	OfferMappings []pageMap       `json:"offerMappings"`
+	Promotions    promotionStruct `json:"promotions"`
 }
 
 type catalogN struct {
@@ -216,18 +217,8 @@ loop:
 
 func (data gameList) Slug() []string {
 	res := make([]string, 0, len(data))
-	var slug string
 	for _, v := range data {
-		if tmp := v.catalog("productHome"); tmp != "" {
-			slug = tmp
-		} else if v.ProductSlug != "" {
-			slug = v.ProductSlug
-		} else {
-			slug = v.UrlSlug
-		}
-		if index := strings.IndexByte(slug, '/'); index != -1 {
-			slug = slug[:index]
-		}
+		slug := v.getPageSlug()
 		res = append(res, finalSlug(slug, v.OfferType))
 	}
 	return res
@@ -238,7 +229,7 @@ func finalSlug(slug, offerType string) string {
 	switch offerType {
 	case "BUNDLE":
 		slug = "bundles" + slug
-	case "OTHERS":
+	case "OTHERS", "BASE_GAME", "ADD_ON":
 		slug = "p" + slug
 	default:
 		slug = "p" + slug
@@ -254,6 +245,32 @@ func (v *gameData) catalog(key string) string {
 		}
 	}
 	return ""
+}
+
+func (v *gameData) offerMap(key string) string {
+	for i := range v.OfferMappings {
+		if v.OfferMappings[i].PageType == key {
+			return v.OfferMappings[i].PageSlug
+		}
+	}
+	return ""
+}
+
+func (v *gameData) getPageSlug() (slug string) {
+	if v.OfferType == "ADD_ON" {
+		return v.offerMap("offer")
+	}
+	if tmp := v.catalog("productHome"); tmp != "" {
+		slug = tmp
+	} else if v.ProductSlug != "" {
+		slug = v.ProductSlug
+	} else {
+		slug = v.UrlSlug
+	}
+	if index := strings.IndexByte(slug, '/'); index != -1 {
+		slug = slug[:index]
+	}
+	return
 }
 
 func (data gameData) String() string {
