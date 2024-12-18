@@ -38,9 +38,10 @@ func handler(w http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		return
 	}
-	data = data.FilterBy(available(time.Now()), // 当时有效
-		after(time.Now().Add(-24*time.Hour)), // 当天生效
-		discountLowerThan(10),                // 1折及以下
+	now := time.Now()
+	data = data.FilterBy(available(now), // 当时有效
+		after(now.Add(-24*time.Hour)), // 当天生效
+		discountLowerThan(10),         // 1折及以下
 	)
 	if len(data) == 0 {
 		os.Stderr.WriteString("no new game avaliable\n")
@@ -108,7 +109,7 @@ func getFreeGameList(ctx context.Context, url string) (gameList, error) {
 					Elements gameList `json:"elements"`
 				} `json:"searchStore"`
 			} `json:"Catalog"`
-		}
+		} `json:"data"`
 	}{}
 	err = json.NewDecoder(res.Body).Decode(data)
 	if err != nil {
@@ -160,10 +161,8 @@ type filterFunc func(g *gameData) bool
 
 func available(t time.Time) filterFunc {
 	return func(g *gameData) bool {
-		var timeInfo promotion
 		for i := range g.Promotions.PromotionalOffers {
-			for j := range g.Promotions.PromotionalOffers[i].PromotionalOffers {
-				timeInfo = g.Promotions.PromotionalOffers[i].PromotionalOffers[j]
+			for _, timeInfo := range g.Promotions.PromotionalOffers[i].PromotionalOffers {
 				if timeInfo.StartDate.Before(t) && timeInfo.EndDate.After(t) {
 					return true
 				}
@@ -175,10 +174,8 @@ func available(t time.Time) filterFunc {
 
 func after(t time.Time) filterFunc {
 	return func(g *gameData) bool {
-		var timeInfo promotion
 		for i := range g.Promotions.PromotionalOffers {
-			for j := range g.Promotions.PromotionalOffers[i].PromotionalOffers {
-				timeInfo = g.Promotions.PromotionalOffers[i].PromotionalOffers[j]
+			for _, timeInfo := range g.Promotions.PromotionalOffers[i].PromotionalOffers {
 				if timeInfo.StartDate.After(t) {
 					return true
 				}
@@ -191,9 +188,8 @@ func after(t time.Time) filterFunc {
 func discountLowerThan(discount uint) filterFunc {
 	return func(g *gameData) bool {
 		for i := range g.Promotions.PromotionalOffers {
-			for j := range g.Promotions.PromotionalOffers[i].PromotionalOffers {
-				t := g.Promotions.PromotionalOffers[i].PromotionalOffers[j]
-				if t.DiscountSetting.DiscountPercentage <= discount {
+			for _, offer := range g.Promotions.PromotionalOffers[i].PromotionalOffers {
+				if offer.DiscountSetting.DiscountPercentage <= discount {
 					return true
 				}
 			}
@@ -204,22 +200,22 @@ func discountLowerThan(discount uint) filterFunc {
 
 func (data gameList) FilterBy(filters ...filterFunc) (res gameList) {
 loop:
-	for i := range data {
+	for _, game := range data {
 		for _, filter := range filters {
-			if !filter(data[i]) {
+			if !filter(game) {
 				continue loop
 			}
 		}
-		res = append(res, data[i])
+		res = append(res, game)
 	}
 	return
 }
 
 func (data gameList) Slug() []string {
 	res := make([]string, 0, len(data))
-	for _, v := range data {
-		slug := v.getPageSlug()
-		res = append(res, finalSlug(slug, v.OfferType))
+	for _, game := range data {
+		slug := game.getPageSlug()
+		res = append(res, finalSlug(slug, game.OfferType))
 	}
 	return res
 }
