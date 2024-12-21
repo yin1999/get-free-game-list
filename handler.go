@@ -60,7 +60,9 @@ func handler(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	slugs := data.Slug()
+	result := data.Map()
 	_, err = messageClient.Send(ctx, &messaging.Message{
+		Data: result,
 		Notification: &messaging.Notification{
 			Title: fmt.Sprintf("%d new game(s) avaliable", len(data)),
 			Body:  fmt.Sprint(data),
@@ -81,7 +83,12 @@ func handler(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	ref := dbClient.NewRef("freeGameList")
-	err = ref.Set(ctx, slugs)
+	if err = ref.Set(ctx, slugs); err != nil {
+		return
+	}
+	// new data structure
+	ref = dbClient.NewRef("freeGames")
+	err = ref.Set(ctx, result)
 }
 
 func newClient(ctx context.Context) (client *firebase.App, err error) {
@@ -216,6 +223,14 @@ func (data gameList) Slug() []string {
 	for _, game := range data {
 		slug := game.getPageSlug()
 		res = append(res, finalSlug(slug, game.OfferType))
+	}
+	return res
+}
+
+func (data gameList) Map() map[string]string {
+	res := make(map[string]string, len(data))
+	for _, game := range data {
+		res[game.Title] = finalSlug(game.getPageSlug(), game.OfferType)
 	}
 	return res
 }
