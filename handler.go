@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -59,19 +58,9 @@ func handler(w http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		return
 	}
-	slugs := data.Slug()
 	result := data.Map()
 	_, err = messageClient.Send(ctx, &messaging.Message{
-		Data: result,
-		Notification: &messaging.Notification{
-			Title: fmt.Sprintf("%d new game(s) avaliable", len(data)),
-			Body:  fmt.Sprint(data),
-		},
-		Webpush: &messaging.WebpushConfig{
-			FCMOptions: &messaging.WebpushFCMOptions{
-				Link: "/epicfreegame?slug=" + url.QueryEscape(strings.Join(slugs, ";")),
-			},
-		},
+		Data:  result,
 		Topic: "all",
 	})
 	if err == nil {
@@ -82,12 +71,7 @@ func handler(w http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		return
 	}
-	ref := dbClient.NewRef("freeGameList")
-	if err = ref.Set(ctx, slugs); err != nil {
-		return
-	}
-	// new data structure
-	ref = dbClient.NewRef("freeGames")
+	ref := dbClient.NewRef("freeGames")
 	err = ref.Set(ctx, result)
 }
 
@@ -216,15 +200,6 @@ loop:
 		res = append(res, game)
 	}
 	return
-}
-
-func (data gameList) Slug() []string {
-	res := make([]string, 0, len(data))
-	for _, game := range data {
-		slug := game.getPageSlug()
-		res = append(res, finalSlug(slug, game.OfferType))
-	}
-	return res
 }
 
 func (data gameList) Map() map[string]string {
