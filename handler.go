@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -16,6 +17,8 @@ import (
 )
 
 const requestURL = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=zh-CN&country=CN&allowCountries=CN"
+
+var invalidChars = regexp.MustCompile(`[\$#\[\]\/\.]`)
 
 func handler(w http.ResponseWriter, _ *http.Request) {
 	var err error
@@ -205,7 +208,12 @@ loop:
 func (data gameList) Map() map[string]string {
 	res := make(map[string]string, len(data))
 	for _, game := range data {
-		res[game.Title] = finalSlug(game.getPageSlug(), game.OfferType)
+		title := invalidChars.ReplaceAllLiteralString(game.Title, " ")
+		title = strings.TrimSpace(title)
+		if title == "" {
+			title = "placeholder"
+		}
+		res[title] = finalSlug(game.getPageSlug(), game.OfferType)
 	}
 	return res
 }
