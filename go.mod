@@ -1,7 +1,6 @@
 module main
 
-go 1.22
-toolchain go1.23.7
+go 1.24
 
 require (
 	firebase.google.com/go/v4 v4.15.2
