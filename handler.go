@@ -120,8 +120,13 @@ type gameData struct {
 	OfferType     string          `json:"offerType"`
 	UrlSlug       string          `json:"urlSlug"`
 	CatalogNs     catalogN        `json:"catalogNs"`
+	Categories    []category      `json:"categories"`
 	OfferMappings []pageMap       `json:"offerMappings"`
 	Promotions    promotionStruct `json:"promotions"`
+}
+
+type category struct {
+	Path string `json:"path"`
 }
 
 type catalogN struct {
@@ -213,7 +218,11 @@ func (data gameList) Map() map[string]string {
 		if title == "" {
 			title = "placeholder"
 		}
-		res[title] = finalSlug(game.getPageSlug(), game.OfferType)
+		ot := game.OfferType
+		if game.categoryPathContains("bundles") {
+			ot = "BUNDLE"
+		}
+		res[title] = finalSlug(game.getPageSlug(), ot)
 	}
 	return res
 }
@@ -265,6 +274,15 @@ func (v *gameData) getPageSlug() (slug string) {
 		slug = slug[:index]
 	}
 	return
+}
+
+func (c *gameData) categoryPathContains(str string) bool {
+	for _, cat := range c.Categories {
+		if cat.Path == str {
+			return true
+		}
+	}
+	return false
 }
 
 func (data gameData) String() string {
