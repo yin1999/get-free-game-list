@@ -79,7 +79,7 @@ func handler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func newClient(ctx context.Context) (client *firebase.App, err error) {
-	opt := option.WithCredentialsJSON([]byte(os.Getenv("firebaseadminsdk")))
+	opt := option.WithAuthCredentialsJSON(option.ServiceAccount, []byte(os.Getenv("firebaseadminsdk")))
 	return firebase.NewApp(ctx, nil, opt)
 }
 
