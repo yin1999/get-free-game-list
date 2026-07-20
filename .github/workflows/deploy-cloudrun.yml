@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - go.mod
+      - go.sum
+      - Dockerfile
+      - "**/*.go"
 
 permissions:
   contents: read
