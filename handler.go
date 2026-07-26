@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 	"time"
+	"unicode"
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/db"
@@ -18,8 +19,6 @@ import (
 
 const requestURL = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=zh-CN&country=CN&allowCountries=CN"
 
-var invalidChars = regexp.MustCompile(`[\$#\[\]\/\.]`)
-
 func handler(w http.ResponseWriter, _ *http.Request) {
 	var err error
 	var resp string
@@ -27,10 +26,10 @@ func handler(w http.ResponseWriter, _ *http.Request) {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+			io.WriteString(w, err.Error())
 		} else {
 			os.Stderr.WriteString("task finished\n")
-			w.Write([]byte(resp))
+			io.WriteString(w, resp)
 		}
 	}()
 	ctx, cc := context.WithTimeout(context.Background(), 45*time.Second)
@@ -213,8 +212,7 @@ loop:
 func (data gameList) Map() map[string]string {
 	res := make(map[string]string, len(data))
 	for _, game := range data {
-		title := invalidChars.ReplaceAllLiteralString(game.Title, " ")
-		title = strings.TrimSpace(title)
+		title := replaceInvalidChars(game.Title)
 		if title == "" {
 			title = "placeholder"
 		}
@@ -287,4 +285,18 @@ func (c *gameData) categoryPathContains(str string) bool {
 
 func (data gameData) String() string {
 	return data.Title
+}
+
+func replaceInvalidChars(s string) string {
+	s = strings.Map(func(r rune) rune {
+		switch r {
+		case '.', '$', '#', '[', ']', '/':
+			return ' '
+		}
+		if unicode.IsControl(r) {
+			return ' '
+		}
+		return r
+	}, s)
+	return strings.Join(strings.Fields(s), " ")
 }

@@ -2,11 +2,12 @@ FROM golang:latest AS builder
 
 WORKDIR /app
 
-COPY . ./
+COPY go.mod go.sum .
 # static linking
 ENV CGO_ENABLED=0
 RUN go mod download
 
+COPY . .
 RUN go build -trimpath -ldflags "-s -w -buildid=" -o server
 
 FROM scratch
