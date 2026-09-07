@@ -1,10 +1,10 @@
 module main
 
-go 1.25.8
+go 1.26.0
 
 require (
 	firebase.google.com/go/v4 v4.21.0
-	google.golang.org/api v0.294.0
+	google.golang.org/api v0.297.0
 )
 
 require (
