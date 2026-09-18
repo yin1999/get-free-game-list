@@ -19,7 +19,7 @@ import (
 
 const requestURL = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=zh-CN&country=CN&allowCountries=CN"
 
-func handler(w http.ResponseWriter, _ *http.Request) {
+func handler(w http.ResponseWriter, req *http.Request) {
 	var err error
 	var resp string
 	defer func() {
@@ -32,8 +32,7 @@ func handler(w http.ResponseWriter, _ *http.Request) {
 			io.WriteString(w, resp)
 		}
 	}()
-	ctx, cc := context.WithTimeout(context.Background(), 45*time.Second)
-	defer cc()
+	ctx := req.Context()
 	var data gameList
 	data, err = getFreeGameList(ctx, requestURL)
 	if err != nil {
@@ -55,12 +54,22 @@ func handler(w http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		return
 	}
+	var dbClient *db.Client
+	dbClient, err = client.Database(ctx)
+	if err != nil {
+		return
+	}
+	ref := dbClient.NewRef("freeGames")
+	result := data.Map()
+	err = ref.Set(ctx, result)
+	if err != nil {
+		return
+	}
 	var messageClient *messaging.Client
 	messageClient, err = client.Messaging(ctx)
 	if err != nil {
 		return
 	}
-	result := data.Map()
 	_, err = messageClient.Send(ctx, &messaging.Message{
 		Data:  result,
 		Topic: "all",
@@ -68,13 +77,6 @@ func handler(w http.ResponseWriter, _ *http.Request) {
 	if err == nil {
 		resp = "send notification to clients"
 	}
-	var dbClient *db.Client
-	dbClient, err = client.Database(ctx)
-	if err != nil {
-		return
-	}
-	ref := dbClient.NewRef("freeGames")
-	err = ref.Set(ctx, result)
 }
 
 func newClient(ctx context.Context) (client *firebase.App, err error) {
@@ -83,6 +85,8 @@ func newClient(ctx context.Context) (client *firebase.App, err error) {
 }
 
 func getFreeGameList(ctx context.Context, url string) (gameList, error) {
+	ctx, cc := context.WithTimeout(ctx, 45*time.Second)
+	defer cc()
 	req, err := http.NewRequestWithContext(ctx,
 		http.MethodGet,
 		url,
