@@ -3,7 +3,7 @@ module main
 go 1.26
 
 require (
-	firebase.google.com/go/v4 v4.21.0
+	firebase.google.com/go/v4 v4.22.0
 	google.golang.org/api v0.298.0
 )
 
